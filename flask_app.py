@@ -57,10 +57,6 @@ def main():
 
     logging.info(f'Response:  {response!r}')
 
-    handle_dialog(request.json, response, 'кролика')
-
-    logging.info(f'Response:  {response!r}')
-
     # Преобразовываем в JSON и возвращаем
     return json.dumps(response)
 
@@ -104,10 +100,14 @@ def handle_dialog(req, res, word):
     ]:
         # Пользователь согласился, прощаемся.
         res['response']['text'] = f'{word} можно найти на Яндекс.Маркете!'
-        res['response']['end_session'] = True
-        return
+        if word == 'кролика':
+            res['response']['end_session'] = True
+            return
+        else:
+            handle_dialog(req, res, 'кролика')
+            return
 
-    # Если нет, то убеждаем его купить {word}!
+            # Если нет, то убеждаем его купить {word}!
     res['response']['text'] = \
         f"Все говорят f'{req['request']['original_utterance']}', а ты купи {word}!"
     res['response']['buttons'] = get_suggests(user_id)
