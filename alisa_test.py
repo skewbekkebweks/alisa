@@ -43,4 +43,6 @@ raw = {
     "version": "1.0"
 }
 
-print(post('http://127.0.0.1:5000/post', json=raw).json())
+url = 'https://skewbekkebweks.herokuapp.com/post'
+
+print(post(url, json=raw).json())
