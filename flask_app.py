@@ -108,6 +108,15 @@ def handle_dialog(req, res, word):
         res['response']['text'] = f'{word} можно найти на Яндекс.Маркете!'
         if word == 'кролика':
             res['response']['end_session'] = True
+        else:
+            res['response']['text'] += ' Купи кролика!'
+            sessionStorage[user_id] = {
+                'suggests': [
+                    "Не хочу.",
+                    "Не буду.",
+                    "Отстань!",
+                ]
+            }
         return
         # Если нет, то убеждаем его купить {word}!
     res['response']['text'] = \
