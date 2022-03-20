@@ -86,7 +86,7 @@ def handle_dialog(req, res, word):
         # Заполняем текст ответа
         res['response']['text'] = f'Привет! Купи {word}!'
         # Получим подсказки
-        res['response']['buttons'] = get_suggests(user_id)
+        res['response']['buttons'] = get_suggests(user_id, word[:-1])
         return
 
     # Сюда дойдем только, если пользователь не новый,
@@ -119,16 +119,16 @@ def handle_dialog(req, res, word):
                     "Отстань!",
                 ]
             }
-            res['response']['buttons'] = get_suggests(user_id)
+            res['response']['buttons'] = get_suggests(user_id, word[:-1])
         return
         # Если нет, то убеждаем его купить {word}!
     res['response']['text'] = \
         f"Все говорят {req['request']['original_utterance']}, а ты купи {word}!"
-    res['response']['buttons'] = get_suggests(user_id)
+    res['response']['buttons'] = get_suggests(user_id, word[:-1])
 
 
 # Функция возвращает две подсказки для ответа.
-def get_suggests(user_id):
+def get_suggests(user_id, word):
     session = sessionStorage[user_id]
 
     # Выбираем две первые подсказки из массива.
@@ -146,7 +146,7 @@ def get_suggests(user_id):
     if len(suggests) < 2:
         suggests.append({
             "title": "Ладно",
-            "url": "https://market.yandex.ru/search?text=слон",
+            "url": f"https://market.yandex.ru/search?text={word}",
             "hide": True
         })
 
