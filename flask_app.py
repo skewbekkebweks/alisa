@@ -1,11 +1,11 @@
 # импортируем библиотеки
-import os
-
-from flask import Flask, request
-import logging
-import waitress
 # библиотека, которая нам понадобится для работы с JSON
 import json
+import logging
+import os
+
+import waitress
+from flask import Flask, request
 
 # создаём приложение
 # мы передаём __name__, в нем содержится информация,
@@ -30,6 +30,7 @@ logging.basicConfig(level=logging.INFO)
 # Когда он откажется купить {word},
 # то мы уберем одну подсказку. Как будто что-то меняется :)
 sessionStorage = {}
+is_elephant = True
 
 
 @app.route('/post', methods=['POST'])
@@ -37,6 +38,7 @@ sessionStorage = {}
 # Внутри функции доступен request.json - это JSON,
 # который отправила нам Алиса в запросе POST
 def main():
+    global is_elephant
     logging.info(f'Request: {request.json!r}')
 
     # Начинаем формировать ответ, согласно документации
@@ -53,9 +55,13 @@ def main():
     # Отправляем request.json и response в функцию handle_dialog.
     # Она сформирует оставшиеся поля JSON, которые отвечают
     # непосредственно за ведение диалога
-    handle_dialog(request.json, response, 'слона')
+    handle_dialog(request.json, response, 'слона' if is_elephant else 'кролика')
 
     logging.info(f'Response:  {response!r}')
+
+    if is_elephant and response['response']['end_session']:
+        response['response']['end_session'] = False
+        is_elephant = False
 
     # Преобразовываем в JSON и возвращаем
     return json.dumps(response)
@@ -103,13 +109,9 @@ def handle_dialog(req, res, word):
         if word == 'кролика':
             res['response']['end_session'] = True
             return
-        else:
-            handle_dialog(req, res, 'кролика')
-            return
-
             # Если нет, то убеждаем его купить {word}!
     res['response']['text'] = \
-        f"Все говорят f'{req['request']['original_utterance']}', а ты купи {word}!"
+        f"Все говорят {req['request']['original_utterance']}, а ты купи {word}!"
     res['response']['buttons'] = get_suggests(user_id)
 
 
