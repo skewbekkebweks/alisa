@@ -108,8 +108,8 @@ def handle_dialog(req, res, word):
         res['response']['text'] = f'{word} можно найти на Яндекс.Маркете!'
         if word == 'кролика':
             res['response']['end_session'] = True
-            return
-            # Если нет, то убеждаем его купить {word}!
+        return
+        # Если нет, то убеждаем его купить {word}!
     res['response']['text'] = \
         f"Все говорят {req['request']['original_utterance']}, а ты купи {word}!"
     res['response']['buttons'] = get_suggests(user_id)
