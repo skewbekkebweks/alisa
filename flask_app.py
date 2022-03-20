@@ -68,6 +68,7 @@ def main():
 
 
 def handle_dialog(req, res, word):
+    global is_elephant
     user_id = req['session']['user_id']
 
     if req['session']['new']:
@@ -109,6 +110,7 @@ def handle_dialog(req, res, word):
         if word == 'кролика':
             res['response']['end_session'] = True
         else:
+            is_elephant = False
             res['response']['text'] += ' Купи кролика!'
             sessionStorage[user_id] = {
                 'suggests': [
