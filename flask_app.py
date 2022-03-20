@@ -63,6 +63,9 @@ def main():
         response['response']['end_session'] = False
         is_elephant = False
 
+    if response['response']['end_session']:
+        is_elephant = True
+
     # Преобразовываем в JSON и возвращаем
     return json.dumps(response)
 
