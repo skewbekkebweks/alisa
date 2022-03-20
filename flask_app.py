@@ -117,6 +117,7 @@ def handle_dialog(req, res, word):
                     "Отстань!",
                 ]
             }
+            res['response']['buttons'] = get_suggests(user_id)
         return
         # Если нет, то убеждаем его купить {word}!
     res['response']['text'] = \
