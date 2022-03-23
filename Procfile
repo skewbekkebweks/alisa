@@ -1,1 +1,1 @@
-web: python geo.py
+web: python distance.py
