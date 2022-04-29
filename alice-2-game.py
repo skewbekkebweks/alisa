@@ -1,28 +1,14 @@
+import json
+import logging
 import os
 
+import requests
 import waitress
 from flask import Flask, request
-import logging
-import json
-import random
 
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO)
-
-cities = {
-    'москва': ['1521359/588ab863252aac579d6a',
-               '1521359/dd66ddeb0e5edb974f34'],
-    'нью-йорк': ['965417/3434d2c5dc6d09c6392e',
-                 '1652229/87adc31b68d883bc1e43'],
-    'париж': ['1030494/470eaa55c62719c0afaa',
-              '965417/37efff396b997a9967c2']}
-
-cities_to_country = {
-    'москва': 'Россия',
-    'нью-йорк': 'США',
-    'париж': 'Франция'
-}
 
 sessionStorage = {}
 
@@ -43,240 +29,23 @@ def main():
 
 
 def handle_dialog(res, req):
-    user_id = req['session']['user_id']
-    if req['session']['new']:
-        res['response']['text'] = 'Привет! Назови своё имя!'
-        sessionStorage[user_id] = {
-            'first_name': None,  # здесь будет храниться имя
-            'game_started': False
-            # здесь информация о том, что пользователь начал игру. По умолчанию False
+    text = req['request']['command'].lower()
+    if 'переведи слово' in text:
+        url = "https://translated-mymemory---translation-memory.p.rapidapi.com/api/get"
+
+        querystring = {"langpair": 'ru|en', "q": text.replace('переведи слово', ''), "mt": "1",
+                       "onlyprivate": "0", "de": "a@b.c"}
+
+        headers = {
+            "X-RapidAPI-Host": "translated-mymemory---translation-memory.p.rapidapi.com",
+            "X-RapidAPI-Key": "a00beb8a82msh3fae25f95213675p1ec1fejsndcdfd1aa707b"
         }
-        return
 
-    if 'помощь' in req['request']['nlu']['tokens']:
-        res['response'][
-            'text'] = 'Я игра для Алисы, загадываю города'
-        res['response']['buttons'] = [
-            {
-                'title': 'Да',
-                'hide': True
-            },
-            {
-                'title': 'Нет',
-                'hide': True
-            },
-            {
-                'title': 'Помощь',
-                'hide': True
-            }
-        ]
-        return
+        response = requests.get(url, headers=headers, params=querystring).json()
 
-    if 'покажи' in req['request']['nlu']['tokens']:
-        res['response'][
-            'text'] = f'https://yandex.ru/maps/?mode=search&text={sessionStorage[user_id]["city"]}'
-        res['response']['buttons'] = [
-            {
-                'title': 'Да',
-                'hide': True
-            },
-            {
-                'title': 'Нет',
-                'hide': True
-            },
-            {
-                'title': 'Помощь',
-                'hide': True
-            }
-        ]
-        return
-
-    if sessionStorage[user_id]['first_name'] is None:
-        first_name = get_first_name(req)
-        if first_name is None:
-            res['response']['text'] = 'Не расслышала имя. Повтори, пожалуйста!'
-            res['response']['buttons'] = [
-                {
-                    'title': 'Да',
-                    'hide': True
-                },
-                {
-                    'title': 'Нет',
-                    'hide': True
-                },
-                {
-                    'title': 'Помощь',
-                    'hide': True
-                }
-            ]
-        else:
-            sessionStorage[user_id]['first_name'] = first_name
-            # создаём пустой массив, в который будем записывать города, которые пользователь уже отгадал
-            sessionStorage[user_id]['guessed_cities'] = []
-            # как видно из предыдущего навыка, сюда мы попали, потому что пользователь написал своем имя.
-            # Предлагаем ему сыграть и два варианта ответа "Да" и "Нет".
-            res['response'][
-                'text'] = 'Приятно познакомиться, {first_name.title()}. Я Алиса. Отгадаешь город по фото?'
-            res['response']['buttons'] = [
-                {
-                    'title': 'Да',
-                    'hide': True
-                },
-                {
-                    'title': 'Нет',
-                    'hide': True
-                },
-                {
-                    'title': 'Помощь',
-                    'hide': True
-                }
-            ]
+        res['response']['text'] = response['responseData']['translatedText']
     else:
-        name = sessionStorage[user_id]['first_name']
-        # У нас уже есть имя, и теперь мы ожидаем ответ на предложение сыграть.
-        # В sessionStorage[user_id]['game_started'] хранится True или False в зависимости от того,
-        # начал пользователь игру или нет.
-        if not sessionStorage[user_id]['game_started']:
-            # игра не начата, значит мы ожидаем ответ на предложение сыграть.
-            if 'да' in req['request']['nlu']['tokens']:
-                # если пользователь согласен, то проверяем не отгадал ли он уже все города.
-                # По схеме можно увидеть, что здесь окажутся и пользователи, которые уже отгадывали города
-                if len(sessionStorage[user_id]['guessed_cities']) == 3:
-                    # если все три города отгаданы, то заканчиваем игру
-                    res['response']['text'] = f'{name}. Ты отгадал все города!'
-                    res['end_session'] = True
-                else:
-                    # если есть неотгаданные города, то продолжаем игру
-                    sessionStorage[user_id]['game_started'] = True
-                    # номер попытки, чтобы показывать фото по порядку
-                    sessionStorage[user_id]['attempt'] = 1
-                    # функция, которая выбирает город для игры и показывает фото
-                    play_game(res, req)
-            elif 'нет' in req['request']['nlu']['tokens']:
-                res['response']['text'] = f'{name}. Ну и ладно!'
-                res['end_session'] = True
-            else:
-                res['response']['text'] = f'{name}. Не поняла ответа! Так да или нет?'
-                res['response']['buttons'] = [
-                    {
-                        'title': 'Да',
-                        'hide': True
-                    },
-                    {
-                        'title': 'Нет',
-                        'hide': True
-                    },
-                    {
-                        'title': 'Помощь',
-                        'hide': True
-                    }
-                ]
-        else:
-            play_game(res, req)
-
-
-def play_game(res, req):
-    user_id = req['session']['user_id']
-    name = sessionStorage[user_id]['first_name']
-    attempt = sessionStorage[user_id]['attempt']
-    if attempt == 1:
-        # если попытка первая, то случайным образом выбираем город для гадания
-        city = random.choice(list(cities))
-        # выбираем его до тех пор пока не выбираем город, которого нет в sessionStorage[user_id]['guessed_cities']
-        while city in sessionStorage[user_id]['guessed_cities']:
-            city = random.choice(list(cities))
-        # записываем город в информацию о пользователе
-        sessionStorage[user_id]['city'] = city
-        # добавляем в ответ картинку
-        res['response']['card'] = {}
-        res['response']['card']['type'] = 'BigImage'
-        res['response']['card']['title'] = 'Что это за город?'
-        res['response']['card']['image_id'] = cities[city][attempt - 1]
-        res['response']['text'] = 'Тогда сыграем!'
-    else:
-        if sessionStorage[user_id].get('country_find', False):
-            sessionStorage[user_id]['country_find'] = False
-            country = sessionStorage[user_id]['country']
-            if get_country(req).lower() == country.lower():
-                res['response']['text'] = f'{name}. Правильно! Сыграем ещё раз?'
-            else:
-                res['response']['text'] = f'{name}. Неправильно! Это {country}. Сыграем ещё раз?'
-            return
-
-        city = sessionStorage[user_id]['city']
-        if get_city(req).lower() == city.lower():
-            res['response']['text'] = f'{name}. Правильно! А в какой стране этот город?'
-            sessionStorage[user_id]['country_find'] = True
-            sessionStorage[user_id]['country'] = cities_to_country[city]
-            res['response']['buttons'] = [
-                {
-                    'title': 'Да',
-                    'hide': True
-                },
-                {
-                    'title': 'Нет',
-                    'hide': True
-                },
-                {
-                    'title': 'Помощь',
-                    'hide': True
-                },
-                {
-                    'title': 'Покажи город на карте',
-                    'hide': True
-                }
-            ]
-            sessionStorage[user_id]['guessed_cities'].append(city)
-            sessionStorage[user_id]['game_started'] = False
-            return
-        else:
-            # если нет
-            if attempt == 3:
-                # если попытка третья, то значит, что все картинки мы показали.
-                # В этом случае говорим ответ пользователю,
-                # добавляем город к sessionStorage[user_id]['guessed_cities'] и отправляем его на второй круг.
-                # Обратите внимание на этот шаг на схеме.
-                res['response']['text'] = f'{name}. Вы пытались. Это {city.title()}. Сыграем ещё?'
-                sessionStorage[user_id]['game_started'] = False
-                sessionStorage[user_id]['guessed_cities'].append(city)
-                return
-            else:
-                # иначе показываем следующую картинку
-                res['response']['card'] = {}
-                res['response']['card']['type'] = 'BigImage'
-                res['response']['card']['title'] = f'{name}. Неправильно. Вот тебе дополнительное фото'
-                res['response']['card']['image_id'] = cities[city][attempt - 1]
-                res['response']['text'] = f'{name}. А вот и не угадал!'
-    # увеличиваем номер попытки доля следующего шага
-    sessionStorage[user_id]['attempt'] += 1
-
-
-def get_city(req):
-    # перебираем именованные сущности
-    for entity in req['request']['nlu']['entities']:
-        # если тип YANDEX.GEO, то пытаемся получить город(city), если нет, то возвращаем None
-        if entity['type'] == 'YANDEX.GEO':
-            # возвращаем None, если не нашли сущности с типом YANDEX.GEO
-            return entity['value'].get('city', None)
-
-
-def get_country(req):
-    # перебираем именованные сущности
-    for entity in req['request']['nlu']['entities']:
-        # если тип YANDEX.GEO, то пытаемся получить город(city), если нет, то возвращаем None
-        if entity['type'] == 'YANDEX.GEO':
-            # возвращаем None, если не нашли сущности с типом YANDEX.GEO
-            return entity['value'].get('country', None)
-
-
-def get_first_name(req):
-    # перебираем сущности
-    for entity in req['request']['nlu']['entities']:
-        # находим сущность с типом 'YANDEX.FIO'
-        if entity['type'] == 'YANDEX.FIO':
-            # Если есть сущность с ключом 'first_name', то возвращаем её значение.
-            # Во всех остальных случаях возвращаем None.
-            return entity['value'].get('first_name', None)
+        res['response']['text'] = 'У меня есть только команда "Переведи слово <слово>"'
 
 
 if __name__ == '__main__':
