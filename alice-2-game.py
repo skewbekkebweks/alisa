@@ -18,6 +18,12 @@ cities = {
     'париж': ['1030494/470eaa55c62719c0afaa',
               '965417/37efff396b997a9967c2']}
 
+cities_to_country = {
+    'москва': 'Россия',
+    'нью-йорк': 'США',
+    'париж': 'Франция'
+}
+
 sessionStorage = {}
 
 
@@ -186,13 +192,20 @@ def play_game(res, req):
         res['response']['card']['image_id'] = cities[city][attempt - 1]
         res['response']['text'] = 'Тогда сыграем!'
     else:
-        # сюда попадаем, если попытка отгадать не первая
+        if sessionStorage[user_id].get('country_find', False):
+            sessionStorage[user_id]['country_find'] = False
+            country = sessionStorage[user_id]['country']
+            if get_country(req).lower() == country.lower():
+                res['response']['text'] = 'Правильно! Сыграем ещё раз?'
+            else:
+                res['response']['text'] = f'Неправильно! Это {country}. Сыграем ещё раз?'
+            return
+
         city = sessionStorage[user_id]['city']
-        # проверяем есть ли правильный ответ в сообщение
         if get_city(req).lower() == city.lower():
-            # если да, то добавляем город к sessionStorage[user_id]['guessed_cities'] и
-            # отправляем пользователя на второй круг. Обратите внимание на этот шаг на схеме.
-            res['response']['text'] = 'Правильно! Сыграем ещё?'
+            res['response']['text'] = 'Правильно! А в какой стране этот город?'
+            sessionStorage[user_id]['country_find'] = True
+            sessionStorage[user_id]['country'] = cities_to_country[city]
             res['response']['buttons'] = [
                 {
                     'title': 'Да',
@@ -243,6 +256,15 @@ def get_city(req):
         if entity['type'] == 'YANDEX.GEO':
             # возвращаем None, если не нашли сущности с типом YANDEX.GEO
             return entity['value'].get('city', None)
+
+
+def get_country(req):
+    # перебираем именованные сущности
+    for entity in req['request']['nlu']['entities']:
+        # если тип YANDEX.GEO, то пытаемся получить город(city), если нет, то возвращаем None
+        if entity['type'] == 'YANDEX.GEO':
+            # возвращаем None, если не нашли сущности с типом YANDEX.GEO
+            return entity['value'].get('country', None)
 
 
 def get_first_name(req):
