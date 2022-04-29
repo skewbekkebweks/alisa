@@ -47,10 +47,43 @@ def handle_dialog(res, req):
         }
         return
 
+    if 'помощь' in req['request']['nlu']['tokens']:
+        res['response'][
+            'text'] = 'Я игра для Алисы, загадываю города'
+        res['response']['buttons'] = [
+            {
+                'title': 'Да',
+                'hide': True
+            },
+            {
+                'title': 'Нет',
+                'hide': True
+            },
+            {
+                'title': 'Помощь',
+                'hide': True
+            }
+        ]
+        return
+
     if sessionStorage[user_id]['first_name'] is None:
         first_name = get_first_name(req)
         if first_name is None:
             res['response']['text'] = 'Не расслышала имя. Повтори, пожалуйста!'
+            res['response']['buttons'] = [
+                {
+                    'title': 'Да',
+                    'hide': True
+                },
+                {
+                    'title': 'Нет',
+                    'hide': True
+                },
+                {
+                    'title': 'Помощь',
+                    'hide': True
+                }
+            ]
         else:
             sessionStorage[user_id]['first_name'] = first_name
             # создаём пустой массив, в который будем записывать города, которые пользователь уже отгадал
@@ -66,6 +99,10 @@ def handle_dialog(res, req):
                 },
                 {
                     'title': 'Нет',
+                    'hide': True
+                },
+                {
+                    'title': 'Помощь',
                     'hide': True
                 }
             ]
@@ -102,6 +139,10 @@ def handle_dialog(res, req):
                     {
                         'title': 'Нет',
                         'hide': True
+                    },
+                    {
+                        'title': 'Помощь',
+                        'hide': True
                     }
                 ]
         else:
@@ -129,7 +170,7 @@ def play_game(res, req):
         # сюда попадаем, если попытка отгадать не первая
         city = sessionStorage[user_id]['city']
         # проверяем есть ли правильный ответ в сообщение
-        if get_city(req) == city:
+        if get_city(req).lower() == city.lower():
             # если да, то добавляем город к sessionStorage[user_id]['guessed_cities'] и
             # отправляем пользователя на второй круг. Обратите внимание на этот шаг на схеме.
             res['response']['text'] = 'Правильно! Сыграем ещё?'
