@@ -66,6 +66,25 @@ def handle_dialog(res, req):
         ]
         return
 
+    if 'покажи' in req['request']['nlu']['tokens']:
+        res['response'][
+            'text'] = f'https://yandex.ru/maps/?mode=search&text={sessionStorage[user_id]["city"]}'
+        res['response']['buttons'] = [
+            {
+                'title': 'Да',
+                'hide': True
+            },
+            {
+                'title': 'Нет',
+                'hide': True
+            },
+            {
+                'title': 'Помощь',
+                'hide': True
+            }
+        ]
+        return
+
     if sessionStorage[user_id]['first_name'] is None:
         first_name = get_first_name(req)
         if first_name is None:
@@ -174,6 +193,24 @@ def play_game(res, req):
             # если да, то добавляем город к sessionStorage[user_id]['guessed_cities'] и
             # отправляем пользователя на второй круг. Обратите внимание на этот шаг на схеме.
             res['response']['text'] = 'Правильно! Сыграем ещё?'
+            res['response']['buttons'] = [
+                {
+                    'title': 'Да',
+                    'hide': True
+                },
+                {
+                    'title': 'Нет',
+                    'hide': True
+                },
+                {
+                    'title': 'Помощь',
+                    'hide': True
+                },
+                {
+                    'title': 'Покажи город на карте',
+                    'hide': True
+                }
+            ]
             sessionStorage[user_id]['guessed_cities'].append(city)
             sessionStorage[user_id]['game_started'] = False
             return
